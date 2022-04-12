@@ -1,0 +1,37 @@
+<?xml version='1.0'?>
+<sdf version='1.7'>
+  <model name='charging_pile'>
+    <link name='base_link'>
+      <inertial>
+        <pose>0.008343 -1 0.024623 0 -0 0</pose>
+        <mass>25.193</mass>
+        <inertia>
+          <ixx>2.09966</ixx>
+          <ixy>-6.50595e-17</ixy>
+          <ixz>5.94165e-19</ixz>
+          <iyy>0.191225</iyy>
+          <iyz>1.2837e-16</iyz>
+          <izz>2.2904</izz>
+        </inertia>
+      </inertial>
+      <collision name='base_link_collision'>
+        <pose>0 0 0 0 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>model://charging_pile/meshes/base_link.STL</uri>
+          </mesh>
+        </geometry>
+      </collision>
+      <visual name='base_link_visual'>
+        <pose>0 0 0 0 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>model://charging_pile/meshes/base_link.STL</uri>
+          </mesh>
+        </geometry>
+      </visual>
+    </link>
+  </model>
+</sdf>

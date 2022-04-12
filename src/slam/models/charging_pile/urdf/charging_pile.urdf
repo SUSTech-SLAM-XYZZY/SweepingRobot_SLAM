@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- This URDF was automatically created by SolidWorks to URDF Exporter! Originally created by Stephen Brawner (brawner@gmail.com) 
+     Commit Version: 1.5.1-0-g916b5db  Build Version: 1.5.7152.31018
+     For more information, please see http://wiki.ros.org/sw_urdf_exporter -->
+<robot
+  name="charging_pile">
+  <link
+    name="base_link">
+    <inertial>
+      <origin
+        xyz="0.00834301719257474 -1 0.0246225247758807"
+        rpy="0 0 0" />
+      <mass
+        value="25.193" />
+      <inertia
+        ixx="2.09965605670833"
+        ixy="-6.50594690425853E-17"
+        ixz="5.94165212631198E-19"
+        iyy="0.191225431708333"
+        iyz="1.28369847145429E-16"
+        izz="2.29040270833333" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://charging_pile/meshes/base_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.647058823529412 0.619607843137255 0.588235294117647 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://charging_pile/meshes/base_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+</robot>
