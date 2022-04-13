@@ -4,7 +4,7 @@
 
 **可能还需要 : ** turtlebot3全部工具包，https://github.com/ROBOTIS-GIT/turtlebot3.git
 
-以上两个可能可以通过apt安装
+以上两个**可能**可以通过apt安装
 
 
 
@@ -38,5 +38,17 @@ roslaunch slam cmd_control.launch
 
 ```shell
 roslaunch slam rviz_setup.launch
+```
+
+**开启cartographer + rviz : **
+
+```shell
+roslaunch slam cartographer_init.launch
+```
+
+**开启wander_bot : **
+
+```shell
+roslaunch slam wander_bot.launch
 ```
 

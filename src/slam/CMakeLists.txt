@@ -13,6 +13,9 @@ find_package(catkin REQUIRED COMPONENTS
   gazebo_ros_control
   urdf
   xacro
+  roscpp
+  rospy
+  std_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -126,6 +129,8 @@ include_directories(
 # add_library(${PROJECT_NAME}
 #   src/${PROJECT_NAME}/slam.cpp
 # )
+add_executable(wander_bot src/Wander.cpp src/wander_bot.cpp)
+target_link_libraries(wander_bot ${catkin_LIBRARIES})
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries

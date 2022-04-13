@@ -30,7 +30,7 @@ LAUNCHSCRIPT='
       required="true"
       type="cartographer_offline_node" args="
           -configuration_directory $(find cartographer_ros)/configuration_files
-          -configuration_basenames backpack_2d.lua
+          -configuration_basenames cartographer.lua
           -urdf_filenames $(find cartographer_ros)/urdf/backpack_2d.urdf
           -load_state_filename '$MAPFILE'
           -bag_filenames '$BAGFILE'

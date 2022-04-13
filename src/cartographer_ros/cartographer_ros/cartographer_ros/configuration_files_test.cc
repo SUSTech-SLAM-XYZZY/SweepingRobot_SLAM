@@ -36,7 +36,7 @@ TEST_P(ConfigurationFilesTest, ValidateNodeOptions) {
 
 INSTANTIATE_TEST_CASE_P(
     ValidateAllNodeOptions, ConfigurationFilesTest,
-    ::testing::Values("backpack_2d.lua", "backpack_2d_localization.lua",
+    ::testing::Values("cartographer.lua", "backpack_2d_localization.lua",
                       "backpack_3d.lua", "backpack_3d_localization.lua",
                       "pr2.lua", "revo_lds.lua", "taurob_tracker.lua"));
 
