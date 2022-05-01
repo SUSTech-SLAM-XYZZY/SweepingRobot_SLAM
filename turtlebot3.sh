@@ -1,0 +1,5 @@
+#!/bin/bash
+
+IP_OF_REMOTE_PC=10.24.159.120
+export ROS_MASTER_URI=http://${IP_OF_REMOTE_PC}:11311
+export ROS_HOSTNAME=${IP_OF_REMOTE_PC}
