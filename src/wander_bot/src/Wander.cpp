@@ -47,7 +47,7 @@ void Wander::turnCorner()
 void Wander::scanCallback(const sensor_msgs::LaserScan::ConstPtr &scan)
 {
     keepMoving0 = keepMoving;
-    bool isObstacleInFront = false;
+    bool isObstacleInFront = false; //是前面的障碍物吗
     keepMoving = true;
     // Find the closest range between the defined minimum and maximum angles
 
@@ -60,8 +60,9 @@ void Wander::scanCallback(const sensor_msgs::LaserScan::ConstPtr &scan)
     //Function: scan->angle_min indicates the rad that starts during the actual scan
     
     std::vector<std::pair<float, float>> scaled_ranges;
+    //pair is to combine 2 data into one data
     for (int i = minIndex; i < 360; i++)
-        scaled_ranges.push_back(std::make_pair(i, scan->ranges[i]));
+        scaled_ranges.push_back(std::make_pair(i, scan->ranges[i]));//make_pair integrated into a container
     for (int i = 0; i <= maxIndex; i++)
         scaled_ranges.push_back(std::make_pair(i, scan->ranges[i]));
     for (auto value : scaled_ranges)

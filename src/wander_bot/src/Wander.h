@@ -6,13 +6,13 @@ class Wander
 public:
     // Tunable parameters 
     const double FORWARD_SPEED = 0.5;
-    double angular_velocity;    // get angular velocity randomly
+    double angular_velocity;    //Randomly get angular velocity    
     const double MIN_SCAN_ANGLE = -15.0 / 180 * M_PI;   //-15 degree rad
     const double MAX_SCAN_ANGLE = +15.0 / 180 * M_PI;
     // Should be smaller than sensor_msgs::LaserScan::range_max
     const float MIN_DIST_FROM_OBSTACLE = 0.5;   //Minimum distance from an object
-    Wander();
-    void startMoving();
+    Wander();//Stopper();
+   void startMoving();
 
 private:
     ros::NodeHandle node;
