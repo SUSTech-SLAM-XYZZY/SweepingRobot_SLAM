@@ -27,6 +27,9 @@
         <remap from="imu_out" to="/flat_imu" />
     </node>
 
+    <!--TF-->
+<!--    <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher"/>-->
+
     <node pkg="rviz" type="rviz" name="rviz" required="true"
           args="-d $(find slam)/configuration_files/turtlebot.rviz"/>
 </launch>

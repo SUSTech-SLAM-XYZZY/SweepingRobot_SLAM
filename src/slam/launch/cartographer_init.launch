@@ -26,10 +26,6 @@
         <remap from="imu_in" to="/imu" />
         <remap from="imu_out" to="/flat_imu" />
     </node>
-    <!--TF-->
-    <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher"/>
-
-    <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher"/>
 
     <node pkg="rviz" type="rviz" name="rviz" required="true"
           args="-d $(find slam)/configuration_files/demo_2d.rviz"/>
