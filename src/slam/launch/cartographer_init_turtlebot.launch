@@ -32,4 +32,6 @@
 
     <node pkg="rviz" type="rviz" name="rviz" required="true"
           args="-d $(find slam)/configuration_files/turtlebot.rviz"/>
+
+    <node name="wander_bot" pkg="slam" type="wander_bot" output="screen"/>
 </launch>

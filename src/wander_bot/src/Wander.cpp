@@ -10,7 +10,7 @@
 Wander::Wander()
 {
     keepMoving = true;
-    keepMoving0=true;
+    keepMoving0 = true;
     getRandom = false;
     // Advertise a new publisher for the robot~s velocity command topic
     commandPub = node.advertise<geometry_msgs::Twist>("/cmd_vel", 10);
@@ -94,7 +94,7 @@ void Wander::startMoving()
         // Need to call this function often to allow ROS to process incoming messages
         ros::spinOnce();
         
-        if (false == keepMoving)
+        if (!keepMoving)
             turnCorner();
         else
             moveForward();

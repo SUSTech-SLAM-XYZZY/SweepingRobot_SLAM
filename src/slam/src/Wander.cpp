@@ -36,7 +36,7 @@ void Wander::turnCorner()
 
     if(getRandom)   //If you are turning, you do not need to regenerate random numbers, only the first moment of turning generates random numbers
     {
-        angular_velocity = (random(100)-50)/25.0;
+        angular_velocity = 0.4;
         msg.angular.z = angular_velocity;
     }
     ROS_INFO("Angular velocity : % f", msg.angular.z);
@@ -66,10 +66,11 @@ void Wander::scanCallback(const sensor_msgs::LaserScan::ConstPtr &scan)
         scaled_ranges.push_back(std::make_pair(i, scan->ranges[i]));
     for (auto value : scaled_ranges)
     {
+//        ROS_INFO("%f", value.second);
         // std::cout << value.first << ":" << value.second << ",";
         //Should be the first and second value of value
         //The first value represents the angle 345-15 and the second represents the distance
-        if (value.second < MIN_DIST_FROM_OBSTACLE)
+        if (value.second < MIN_DIST_FROM_OBSTACLE && value.second != 0)
         {
             keepMoving = false;
             ROS_INFO("Turn a corner!");
