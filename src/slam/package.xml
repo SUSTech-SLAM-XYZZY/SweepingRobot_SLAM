@@ -75,6 +75,11 @@
   <exec_depend>rospy</exec_depend>
   <exec_depend>std_msgs</exec_depend>
 
+  <!--pcl here-->
+  <build_depend>libpcl-all-dev</build_depend>
+  <build_export_depend>libpcl-all-dev</build_export_depend>
+  <exec_depend>libpcl-all</exec_depend>
+
   <!-- The export tag contains other, unspecified, tags -->
   <export>
     <!-- Other tools can request additional information be placed here -->

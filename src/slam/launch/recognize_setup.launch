@@ -1,0 +1,4 @@
+<launch>
+    <!-- Run node -->
+    <node name="recognize_rcv" pkg="slam" type="recognize" output="screen"/>
+</launch>

@@ -16,6 +16,8 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   std_msgs
+  pcl_conversions
+  pcl_ros
 )
 
 ## System dependencies are found with CMake's conventions
@@ -131,6 +133,9 @@ include_directories(
 # )
 add_executable(wander_bot src/Wander.cpp src/wander_bot.cpp)
 target_link_libraries(wander_bot ${catkin_LIBRARIES})
+
+add_executable(recognize src/recognize.cpp)
+target_link_libraries(recognize ${catkin_LIBRARIES})
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
