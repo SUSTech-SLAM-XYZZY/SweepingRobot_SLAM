@@ -6,6 +6,7 @@
 #include <vector>
 #include "ros/ros.h"
 #include "sensor_msgs/LaserScan.h"
+#include "slam/pos.h"
 #include <pcl/point_cloud.h>
 #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl/io/pcd_io.h>
@@ -19,7 +20,7 @@
 using namespace std;
 const int INF = 0x3f3f3f3f;
 const int len_board = 250;
-const int point_num = 700;
+const int point_num = 500;
 
 struct Point {
     int dist;
@@ -56,10 +57,16 @@ vector<vector<Point *> > *find_Features_cluster(vector<vector<Point *> > *cluste
 
 vector<vector<Point *> > *find_Features_cluster_tmp(vector<vector<Point *> > *cluster);
 
+void sendRosInfo(vector<Point *> *tmplist, vector<vector<Point *> > cluster_syn);
+
+// set to global
+ros::Publisher angle_dist;
+
 int main(int argc, char** argv) {
     ros::init(argc, argv, "recognize_rcv"); //初始化订阅者节点
     ros::NodeHandle n;
     ros::Subscriber ros_tutorial_sub = n.subscribe("scan", 1000, callback_func);
+    angle_dist = n.advertise<slam::pos>("/pos/angle_dist", 10);
     ros::spin();
     return 0;
 }
@@ -556,11 +563,9 @@ vector<vector<Point *> > *find_Features_cluster_tmp(vector<vector<Point *> > *cl
         std::sort(line.begin(), line.end(), SortFunction);
         vector<vector<Point *> > cluster_syn = strength_cluster(line);
         vector<Point *> *tmplist = new vector<Point *>();
-//        print_cluster(cluster_syn);
         // three stages
         int stages = 0;
         int N = cluster_syn.size();
-//        vector<int> synlist;
         vector<int> idx;
         int lastidx = 0;
         float bias = 2;
@@ -568,85 +573,84 @@ vector<vector<Point *> > *find_Features_cluster_tmp(vector<vector<Point *> > *cl
             std::sort(cluster_syn.at(i).begin(), cluster_syn.at(i).end(), SortFunction);
             float syn = get_avg_bias(cluster_syn.at(i));
             if(stages == 0 && syn < bias){
-//                synlist.clear();
                 idx.clear();
-//                synlist.push_back(get_average_str_weight_back(cluster_syn.at(i)));
                 idx.push_back(i);
                 lastidx = i;
                 stages ++;
             }
             else if(stages == 1){
-//                int syn_tmp = get_average_str_front(cluster_syn.at(i));
                 if(syn < bias){
                     float dist = get_two_point_dist(cluster_syn.at(idx.at(0)).back(), cluster_syn.at(i).front());
                     if(dist >= 80){
                         i = lastidx + 1;
                         stages = 0;
-//                        synlist.clear();
                         idx.clear();
                         continue;
                     }
                     if(dist <= 30){
                         idx.at(0) = i;
-//                        synlist.at(0) = get_average_str(cluster_syn.at(i));
                         continue;
                     }
                     dist = get_two_point_dist(cluster_syn.at(i).front(), cluster_syn.at(i).back());
                     if(dist > 60 || dist < 20){
                         stages = 0;
                         idx.clear();
-//                        synlist.clear();
                         continue;
                     }
-//                    synlist.push_back(get_average_str_weight_back(cluster_syn.at(i)));
                     idx.push_back(i);
                     stages++;
                 }
-//                else if(syn_tmp > synlist.at(0)){
-//                    synlist.pop_back();
-//                    idx.pop_back();
-//                    synlist.push_back(syn_tmp);
-//                    idx.push_back(i);
-//                }
             }
             else if(stages == 2){
-//                int syn_tmp = get_average_str_front(cluster_syn.at(i));
                 if(syn < bias){
                     float dist = get_two_point_dist(cluster_syn.at(idx.at(1)).back(), cluster_syn.at(i).front());
                     if(dist >= 80){
                         i = lastidx + 1;
                         stages = 0;
-//                        synlist.clear();
                         idx.clear();
                         continue;
                     }
                     if(dist <= 30){
                         idx.at(1) = i;
-//                        synlist.at(1) = get_average_str(cluster_syn.at(i));
                         continue;
                     }
-//                    synlist.push_back(get_average_str_weight_back(cluster_syn.at(i)));
                     idx.push_back(i);
                     stages++;
                 }
-//                else if(syn_tmp > synlist.at(1)){
-//                    synlist.erase(synlist.begin());
-//                    idx.erase(synlist.begin());
-//                    synlist.push_back(syn_tmp);
-//                    idx.push_back(i);
-//                    stages = 1;
-//                }
             }
             if(stages == 3){
-//                cout << "Find" << endl;
                 // just break the loop
                 for (int j = 0; j < idx.size(); ++j) {
                     tmplist->insert(tmplist->end(), cluster_syn.at(j).begin(), cluster_syn.at(j).end());
                 }
+                sendRosInfo(tmplist, cluster_syn);
                 break;
             }
         }
         result->push_back(*tmplist);
     }
     return result;
+}
+
+void sendRosInfo(vector<Point *> *tmplist, vector<vector<Point *> > cluster_syn){
+    if(ros::ok()){
+        slam::pos msg;
+        vector<float> dist;
+        vector<float> angle;
+        vector<float> dist_mid;
+        vector<float> angle_mid;
+        for(int i = 0; i < tmplist->size(); i++){
+            dist.push_back(tmplist->at(i)->dist);
+            angle.push_back(tmplist->at(i)->angle);
+        }
+        for(int i = 0; i < cluster_syn.at(1).size(); i++){
+            dist_mid.push_back(cluster_syn.at(1).at(i)->dist);
+            angle_mid.push_back(cluster_syn.at(1).at(i)->angle);
+        }
+        msg.dist = dist;
+        msg.angle = angle;
+        msg.dist_mid = dist_mid;
+        msg.angle_mid = angle_mid;
+        angle_dist.publish(msg);
+    }
 }
