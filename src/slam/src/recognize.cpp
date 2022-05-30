@@ -6,13 +6,16 @@
 #include <vector>
 #include "ros/ros.h"
 #include "sensor_msgs/LaserScan.h"
-#include "slam/pos.h"
+#include "geometry_msgs/PoseStamped.h"
 #include <pcl/point_cloud.h>
 #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl/sample_consensus/ransac.h>
 #include <pcl/sample_consensus/sac_model_line.h>
 #include <pcl/visualization/pcl_visualizer.h>
+#include <Eigen/Core>
+#include <Eigen/Geometry>
+#include <tf2/LinearMath/Quaternion.h>
 #include <stack>
 
 #define PI 3.14159
@@ -21,6 +24,7 @@ using namespace std;
 const int INF = 0x3f3f3f3f;
 const int len_board = 250;
 const int point_num = 500;
+vector<double> k;
 
 struct Point {
     int dist;
@@ -37,11 +41,22 @@ struct Features {
     float last = 0;
 } FT;
 
+struct position{
+    double x = 0;
+    double y = 0;
+    double z = 0;
+} nowP;
+
+struct orientation{
+    double x = 0;
+    double y = 0;
+    double z = 0;
+    double w = 0;
+} nowOrientation;
+
 void callback_func(const sensor_msgs::LaserScan &msg);
 //vector<cv::Point2d> points = {};
 pcl::PointCloud<pcl::PointXY>::Ptr cloud(new pcl::PointCloud<pcl::PointXY>);
-
-float calc_dist(int dist_1, float angle_1, int dist_2, float angle_2);
 
 vector<vector<Point *> > *calc_knn(float dist, float angle, int flag, int syn_quality);
 
@@ -51,24 +66,35 @@ vector<vector<Point *> > *straightLine(vector<vector<Point *>> cluster);
 
 vector<vector<Point *> > strength_cluster(vector<Point *> line);
 
-vector<vector<Point *> > *find_Features_simple(vector<vector<Point *> > *cluster);
-
-vector<vector<Point *> > *find_Features_cluster(vector<vector<Point *> > *cluster);
-
 vector<vector<Point *> > *find_Features_cluster_tmp(vector<vector<Point *> > *cluster);
 
-void sendRosInfo(vector<Point *> *tmplist, vector<vector<Point *> > cluster_syn);
+void sendRosInfo(vector<vector<Point *> > cluster_syn, double k);
+
+void update_pos(const geometry_msgs::PoseStamped &msg);
 
 // set to global
 ros::Publisher angle_dist;
+ros::Subscriber nowPos;
 
 int main(int argc, char** argv) {
     ros::init(argc, argv, "recognize_rcv"); //初始化订阅者节点
     ros::NodeHandle n;
     ros::Subscriber ros_tutorial_sub = n.subscribe("scan", 1000, callback_func);
-    angle_dist = n.advertise<slam::pos>("/pos/angle_dist", 10);
+    nowPos = n.subscribe("tracked_pose", 1000, update_pos);
+    angle_dist = n.advertise<geometry_msgs::PoseStamped>("/pos/angle_dist", 10);
     ros::spin();
     return 0;
+}
+
+void update_pos(const geometry_msgs::PoseStamped &msg){
+    nowP.x = msg.pose.position.x;
+    nowP.y = msg.pose.position.y;
+    nowP.z = msg.pose.position.z;
+    nowOrientation.x = msg.pose.orientation.x;
+    nowOrientation.y = msg.pose.orientation.y;
+    nowOrientation.z = msg.pose.orientation.z;
+    nowOrientation.w = msg.pose.orientation.w;
+//    cout << "Position update success!" << endl;
 }
 
 void callback_func(const sensor_msgs::LaserScan &msg){
@@ -88,7 +114,7 @@ void callback_func(const sensor_msgs::LaserScan &msg){
         vector<vector<Point *> > *result = find_Features_cluster_tmp(tmp);
         if (!tmp->empty()) {
             cout << "===============find feature!!!================" << endl;
-            print_cluster(*result);
+//            print_cluster(*result);
             cout << "===============end of feature!================" << endl;
             FT.list.clear();
             cloud->clear();
@@ -243,6 +269,7 @@ void print_cluster(vector<vector<Point *>> cluster) {
 // TODO : Speed up
 vector<vector<Point *> > *straightLine(vector<vector<Point *>> cluster) {
     vector<vector<Point *> > *result = new vector<vector<Point *> >();
+    k.clear();
     int col = 0;
     for (int i = 0; i < cluster.size(); i++) {
         int vis[cluster.at(i).size()];
@@ -285,6 +312,9 @@ vector<vector<Point *> > *straightLine(vector<vector<Point *>> cluster) {
 //                 << " = (y - " << coefficient[1] << ") / " << coefficient[4]
 //                 << " = (z - " << coefficient[2] << ") / " << coefficient[5]
 //                 << endl;
+
+//            cout << "k " << coefficient[4] / coefficient[3] << endl;
+            k.push_back(coefficient[4] / coefficient[3]);
             vector<Point *> *out_line = new vector<Point *>();
             for (int t = 0; t < inliers.size(); t++) {
                 vis[forwarding.at(inliers.at(t))] = 1;
@@ -367,185 +397,7 @@ inline bool comp(Point *p1, Point *p2) {
     return p1->angle < p2->angle;
 }
 
-inline bool check_consecutive(vector<Point *> line) {
-    sort(line.begin(), line.end(), comp);
-    float k = 2; // parameters
-    return abs(line.front()->angle - line.back()->angle) > line.size() * k;
-}
-
-inline int get_average_dist(vector<Point *> line) {
-    int sum_dist = 0;
-    for (Point *p: line) {
-        sum_dist += p->dist;
-    }
-    return (int) sum_dist / line.size();
-}
-
-inline int get_average_str(vector<Point *> line) {
-    int sum_str = 0;
-    for (Point *p: line) {
-        sum_str += p->syn_quality;
-    }
-    return (int) sum_str / line.size();
-}
-
-inline int get_average_str_weight_back(vector<Point *> line) {
-    float sum_str = 0;
-    float weight = 1.0 / line.size();
-    for (Point *p: line) {
-        sum_str += p->syn_quality * weight;
-        weight += 1.0 / line.size();
-    }
-    return (int) (2 * sum_str / line.size());
-}
-
-inline int get_average_str_front(vector<Point *> line) {
-    float sum_str = 0;
-    float weight = 1.0;
-    for (Point *p: line) {
-        sum_str += p->syn_quality * weight;
-        weight -= 1.0 / line.size();
-    }
-    return (int) (2 * sum_str / line.size());
-}
-
-vector<vector<Point *> > *find_Features_simple(vector<vector<Point *> > *cluster) {
-    vector<vector<Point *> > *result = new vector<vector<Point *>>();
-    for (vector<Point *> line: *cluster) {
-        if (check_consecutive(line))
-            continue;
-
-        int N = line.size();
-        int radii_syn = 10;
-
-        int sum_syn_quality = 0;
-        int sum_dist = 0;
-        int stage = 1;
-        int s = 0;
-        int syn_avg[5];
-        int dist_avg[5];
-        for (int i = 0; i < N; i++) {
-            Point *p = line.at(i);
-            sum_syn_quality += p->syn_quality;
-            sum_dist += p->dist;
-            s++;
-            if (i == N * stage / 5 - 1) {
-                syn_avg[stage - 1] = (int) sum_syn_quality / s;
-                dist_avg[stage - 1] = (int) sum_dist / s;
-                sum_syn_quality = 0;
-                sum_dist = 0;
-                stage++;
-                s = 0;
-            }
-        }
-
-        //强-弱-强-弱-强
-        if (!(syn_avg[1] < syn_avg[0] && syn_avg[1] < syn_avg[2] && syn_avg[1] < syn_avg[4] &&
-              syn_avg[3] < syn_avg[0] && syn_avg[3] < syn_avg[2] && syn_avg[3] < syn_avg[4])) {
-            continue;
-        }
-
-        // 强-强-强之间不能差距太大
-        if (2 * syn_avg[2] < (syn_avg[0] + syn_avg[4] - radii_syn) ||
-            2 * syn_avg[2] > (syn_avg[0] + syn_avg[4] + radii_syn)) {
-            continue;
-        }
-
-        //长度不能超过该距离下最长的长度
-        int avg_dist = 0;
-        for (int i = 0; i < 5; i += 2) {
-            avg_dist += dist_avg[i];
-        }
-        avg_dist /= 3;
-        int num_point_max = (int) 1.1 * 2 * atan(len_board / (2 * avg_dist));
-        if (N > num_point_max) {
-            continue;
-        }
-        result->push_back(line);
-    }
-    return result;
-}
-
 bool SortFunction (Point * i,Point * j) { return (i->x < j->x); }
-
-vector<vector<Point *> > *find_Features_cluster(vector<vector<Point *> > *cluster) {
-    vector<vector<Point *> > *result = new vector<vector<Point *>>;
-    for (vector<Point *> line: *cluster) {
-        if (check_consecutive(line)) {
-            continue;
-        }
-
-        // int N = line.size();
-        int radii_syn = 10;
-
-        vector<vector<Point *> > cluster_syn = strength_cluster(line);
-        print_cluster(cluster_syn);
-        cout << "-----------------------------------------------------" << endl;
-        int N = cluster_syn.size();
-        int dist_avg[N], syn_avg[N], line_size[N];
-        for (int i = 0; i < N; i++) {
-            std::sort(cluster_syn.at(i).begin(), cluster_syn.at(i).end(), SortFunction);
-            dist_avg[i] = get_average_dist(cluster_syn[i]);
-            syn_avg[i] = get_average_dist(cluster_syn[i]);
-            line_size[i] = cluster_syn.at(i).at(0)->angle;
-        }
-
-        for (int i = 0; i < N; i++) {
-            int last_idx = i;
-//            int max_size = line_size[i] * 10;
-            float atansize = 2 * atan((double)len_board / (double)(2 * dist_avg[i])) * 180 / PI;
-            int max_size = (int) 1.2 * atansize;
-            int min_size = (int) 0.8 * atansize;
-            int total_size = 0;
-            while (last_idx < N) {
-                total_size += line_size[last_idx++];
-                if (total_size >= max_size) {
-                    last_idx--;
-                    break;
-                }
-            }
-            if (total_size < min_size) {
-                continue;
-            }
-
-            for (int j = i + 1; j < last_idx; j++) {
-                for (int k = j + 1; k <= last_idx; k++) {
-                    //强-弱-强-弱-强
-//                    if (!(syn_avg[i] < syn_avg[0] && syn_avg[1] < syn_avg[2] && syn_avg[1] < syn_avg[4] &&
-//                          syn_avg[3] < syn_avg[0] && syn_avg[3] < syn_avg[2] && syn_avg[3] < syn_avg[4])) {
-//                        continue;
-//                    }
-
-                    // check length between (0.6, 1.4)
-                    if (line_size[i] + line_size[k] > line_size[j] * 2 * 1.4 ||
-                        line_size[i] + line_size[k] < line_size[j] * 2 * 0.6) {
-                        continue;
-                    }
-                    //check average distance
-                    if (dist_avg[i] + dist_avg[k] > dist_avg[j] * 2 * 1.3 ||
-                        dist_avg[i] + dist_avg[k] < dist_avg[j] * 2 * 0.7) {
-                        continue;
-                    }
-                    // check average strength
-                    if (syn_avg[i] + syn_avg[k] > syn_avg[j] * 2 * 1.3 ||
-                        syn_avg[i] + syn_avg[k] < syn_avg[j] * 2 * 0.7) {
-                        continue;
-                    }
-
-                    vector<Point *> *feature = new vector<Point *>();
-                    for (int ii = i; ii <= k; ii++) {
-                        for (Point *p: cluster_syn[ii]) {
-                            feature->push_back(p);
-                        }
-                        Point * p = new Point();
-                    }
-                    result->push_back(*feature);
-                }
-            }
-        }
-    }
-    return result;
-}
 
 float get_two_point_dist(Point * a, Point * b){
     float ax = a->dist * sin(a->angle * PI / 180);
@@ -555,12 +407,12 @@ float get_two_point_dist(Point * a, Point * b){
     return sqrt(pow(ax - bx, 2) + pow(ay - by, 2));
 }
 
-
-
 vector<vector<Point *> > *find_Features_cluster_tmp(vector<vector<Point *> > *cluster) {
     vector<vector<Point *> > *result = new vector<vector<Point *>>;
+    int kidx = 0;
     for (vector<Point *> line : *cluster) {
         std::sort(line.begin(), line.end(), SortFunction);
+        double kvalue = k.at(kidx++);
         vector<vector<Point *> > cluster_syn = strength_cluster(line);
         vector<Point *> *tmplist = new vector<Point *>();
         // three stages
@@ -623,7 +475,7 @@ vector<vector<Point *> > *find_Features_cluster_tmp(vector<vector<Point *> > *cl
                 for (int j = 0; j < idx.size(); ++j) {
                     tmplist->insert(tmplist->end(), cluster_syn.at(j).begin(), cluster_syn.at(j).end());
                 }
-                sendRosInfo(tmplist, cluster_syn);
+                sendRosInfo(cluster_syn, kvalue);
                 break;
             }
         }
@@ -632,25 +484,46 @@ vector<vector<Point *> > *find_Features_cluster_tmp(vector<vector<Point *> > *cl
     return result;
 }
 
-void sendRosInfo(vector<Point *> *tmplist, vector<vector<Point *> > cluster_syn){
+void sendRosInfo(vector<vector<Point *> > cluster_syn, double K){
+    vector<Point *> mid = cluster_syn.at(1);
+    int mid_len = mid.size();
+    double dis = (mid.at(0)->dist + mid.at(mid_len - 1)->dist) / 2;
+    double angle = (mid.at(0)->angle + mid.at(mid_len - 1)->angle) / 2;
+    double x = cos(angle * PI / 180) * dis / 1000;
+    double y = sin(angle * PI / 180) * dis / 1000;
+
+    Eigen::Quaterniond q1 = Eigen::Quaterniond(nowOrientation.w,nowOrientation.x,nowOrientation.y,nowOrientation.z).normalized();
+    Eigen::Quaterniond q2 = Eigen::Quaterniond(1,0,0,0).normalized();
+
+    Eigen::Vector3d t1 = Eigen::Vector3d(nowP.x,nowP.y,0);
+    Eigen::Vector3d t2 = Eigen::Vector3d(0,0,0);
+
+    Eigen::Vector3d p1 = Eigen::Vector3d(x, y, 0);
+    Eigen::Vector3d p2;
+
+    p2 = q2 * q1.inverse()*(p1 - t1)+ t2;
+//    cout << "dis is " << dis << " angle is " << angle << endl;
+//    cout << "x is " << x << " y is " << y << endl;
+//    cout << "now P is " << nowP.x << " " << nowP.y << endl;
+    cout << p2.transpose() << endl;
+    cout << "K angle is " << atan(K)/ PI * 180 << endl;
+    cout << "Euler angle is " << q1.toRotationMatrix().eulerAngles(2, 1, 0)[0]/ PI * 180 << endl;
+    cout << "angle is " << atan(K)/ PI * 180 + q1.toRotationMatrix().eulerAngles(2, 1, 0)[0]/ PI * 180 << endl;
+
+    Eigen::Quaterniond quaternion = Eigen::AngleAxisd(atan(K) + q1.toRotationMatrix().eulerAngles(2, 1, 0)[0], Eigen::Vector3d::UnitZ()) *
+                                    Eigen::AngleAxisd(0, Eigen::Vector3d::UnitY()) *
+                                    Eigen::AngleAxisd(0,  Eigen::Vector3d::UnitX());
+
     if(ros::ok()){
-        slam::pos msg;
-        vector<float> dist;
-        vector<float> angle;
-        vector<float> dist_mid;
-        vector<float> angle_mid;
-        for(int i = 0; i < tmplist->size(); i++){
-            dist.push_back(tmplist->at(i)->dist);
-            angle.push_back(tmplist->at(i)->angle);
-        }
-        for(int i = 0; i < cluster_syn.at(1).size(); i++){
-            dist_mid.push_back(cluster_syn.at(1).at(i)->dist);
-            angle_mid.push_back(cluster_syn.at(1).at(i)->angle);
-        }
-        msg.dist = dist;
-        msg.angle = angle;
-        msg.dist_mid = dist_mid;
-        msg.angle_mid = angle_mid;
+        geometry_msgs::PoseStamped msg;
+        msg.pose.position.x = p2.x();
+        msg.pose.position.y = p2.y();
+        msg.pose.position.z = p2.z();
+        msg.pose.orientation.x = quaternion.x();
+        msg.pose.orientation.y = quaternion.y();
+        msg.pose.orientation.z = quaternion.z();
+        msg.pose.orientation.w = quaternion.w();
+        cout << "send!" << endl;
         angle_dist.publish(msg);
     }
 }
