@@ -38,7 +38,7 @@ void Wander::turnCorner()
 
     if(getRandom)   //If you are turning, you do not need to regenerate random numbers, only the first moment of turning generates random numbers
     {
-        angular_velocity = 0.4;
+        angular_velocity = 0.2;
         msg.angular.z = angular_velocity;
     }
     ROS_INFO("Angular velocity : % f", msg.angular.z);
@@ -84,7 +84,7 @@ void Wander::scanCallback(const sensor_msgs::LaserScan::ConstPtr &scan)
 
 void Wander::ChangeFlag(const slam::pos &msg){
     if(msg.flag == START_WANDERING){
-        this->startMoving();
+        this->startMovingFlag = true;
     }
     else if(msg.flag == STOP_WANDERING){
         this->stopMoving();
@@ -101,22 +101,30 @@ void Wander::startMoving()
     // Keep spinning loop until user presses Ctrl+C or the robot got too close to an obstacle
     while (ros::ok())
     {
-        // the variable to info and stop
-        if(!startMovingFlag){
-            return;
-        }
         // Need to call this function often to allow ROS to process incoming messages
         ros::spinOnce();
-        
-        if (!keepMoving)
-            turnCorner();
-        else
-            moveForward();
-        
+
+        // the variable to info and stop
+        if(startMovingFlag){
+            if (!keepMoving)
+                turnCorner();
+            else
+                moveForward();
+        }
         rate.sleep();
     }
 }
 
 void Wander::stopMoving(){
     startMovingFlag = false;
+    sleep(1);
+    geometry_msgs::Twist msg;
+    msg.angular.x = 0;
+    msg.angular.y = 0;
+    msg.angular.z = 0;
+    msg.linear.x = 0;
+    msg.linear.y = 0;
+    msg.linear.z = 0;
+    commandPub.publish(msg);
+    ROS_INFO("Stop Moving!");
 }
