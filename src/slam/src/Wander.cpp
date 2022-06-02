@@ -1,21 +1,23 @@
 #include "Wander.h"
 #include "geometry_msgs/Twist.h"
-
+#include "slam/pos.h"
 #include<stdlib.h>  //random number
 #include<time.h>
+#include "message_flag.h"
 #define random(x) (rand()%x)
-
-
 
 Wander::Wander()
 {
     keepMoving = true;
-    keepMoving0=true;
+    keepMoving0 = true;
     getRandom = false;
-    // Advertise a new publisher for the robot~s velocity command topic
+    startMovingFlag = false;
+    // Advertise a new publisher for the robots velocity command topic
     commandPub = node.advertise<geometry_msgs::Twist>("/cmd_vel", 10);
-    // Subscribe to the simulated robot~s laser scan topic
-    laserSub = node.subscribe("/scan", 1, &Wander::scanCallback, this);
+    // Subscribe to the simulated robots laser scan topic
+    laserSub = node.subscribe("/scan", 10, &Wander::scanCallback, this);
+    // The subscriber to recvice the flag
+    movingFlag = node.subscribe("/pos/movingFlag", 10, &Wander::ChangeFlag, this);
 }
 // Send a velocity command
 void Wander::moveForward()
@@ -51,7 +53,6 @@ void Wander::scanCallback(const sensor_msgs::LaserScan::ConstPtr &scan)
     keepMoving = true;
     // Find the closest range between the defined minimum and maximum angles
 
-    
     int minIndex = 360 + floor((MIN_SCAN_ANGLE - scan->angle_min) / scan->angle_increment);
     //floor() rounds down
     //Change the radian system to 360 degree system, here minndex is 345 degrees when MIN_SCAN_ANGLE = -15.0 / 180 * M_PI
@@ -81,20 +82,33 @@ void Wander::scanCallback(const sensor_msgs::LaserScan::ConstPtr &scan)
      //std::cout << std::endl;
 }
 
+void Wander::ChangeFlag(const slam::pos &msg){
+    if(msg.flag == START_WANDERING){
+        this->startMoving();
+    }
+    else if(msg.flag == STOP_WANDERING){
+        this->stopMoving();
+    }
+}
+
 
 void Wander::startMoving()
 {
     srand((int)time(0));
-
+    startMovingFlag = true;
     ros::Rate rate(10);
     ROS_INFO("Start moving");
     // Keep spinning loop until user presses Ctrl+C or the robot got too close to an obstacle
     while (ros::ok())
     {
+        // the variable to info and stop
+        if(!startMovingFlag){
+            return;
+        }
         // Need to call this function often to allow ROS to process incoming messages
         ros::spinOnce();
         
-        if (false == keepMoving)
+        if (!keepMoving)
             turnCorner();
         else
             moveForward();
@@ -103,3 +117,6 @@ void Wander::startMoving()
     }
 }
 
+void Wander::stopMoving(){
+    startMovingFlag = false;
+}

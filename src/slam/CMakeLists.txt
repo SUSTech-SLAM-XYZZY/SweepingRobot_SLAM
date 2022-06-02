@@ -141,6 +141,9 @@ target_link_libraries(recognize ${catkin_LIBRARIES})
 add_executable(transform_into_pos src/transform_into_pos.cpp)
 target_link_libraries(transform_into_pos ${catkin_LIBRARIES})
 
+add_executable(docNavigation src/docNavigation.cpp)
+target_link_libraries(docNavigation ${catkin_LIBRARIES})
+
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure
