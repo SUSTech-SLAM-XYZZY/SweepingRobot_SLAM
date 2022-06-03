@@ -20,9 +20,9 @@ DockNav::DockNav() {
     nav_radian_range = NAV_ANGLE_RANGE / 180.0 * 3.14159;
 //        commandPub = node.advertise<>("", 10);
     movingFlag = node.subscribe("/pos/movingFlag", 10, &DockNav::flagToAction, this);
+    docPos = node.subscribe("/pos/doc_pos", 10, &DockNav::callback, this);
     movingFlagPub = node.advertise<slam::pos>("/pos/movingFlag", 10);
     stopNav = node.advertise<actionlib_msgs::GoalID>("/move_base/cancel", 10);
-
     cout << "init finish ! " << endl;
 }
 
@@ -78,7 +78,8 @@ void DockNav::checkDockPosUpdate() {
 
 void DockNav::flagToAction(const slam::pos &msg){
     if(msg.flag == START_NAV){
-        this->getFrontPos();
+        geometry_msgs::PoseStamped tmp = this->getFrontPos();
+        cout << tmp << endl;
     }else if(msg.flag == START_ROUTE){
         this->startDockNav();
     }
@@ -86,10 +87,24 @@ void DockNav::flagToAction(const slam::pos &msg){
 
 geometry_msgs::PoseStamped DockNav::getFrontPos(){
     double roll, pitch, yaw;
+    geometry_msgs::PoseStamped frontDoc;
     tf::Quaternion angle_tmp;
     tf::quaternionMsgToTF(lastPos.pose.orientation,angle_tmp);
     tf::Matrix3x3(angle_tmp).getRPY(roll, pitch, yaw);
     cout << "roll is " << roll << " pitch is " << pitch << " yaw is " << yaw << endl;
+    yaw += PI;
+    double front_len = 0.3;
+    double delta_x = front_len * cos(yaw);
+    double delta_y = front_len * sin(yaw);
+    frontDoc.header.frame_id = lastPos.header.frame_id;
+    frontDoc.pose.position.x = lastPos.pose.position.x + delta_x;
+    frontDoc.pose.position.y = lastPos.pose.position.y + delta_y;
+    frontDoc.pose.position.z = lastPos.pose.position.z;
+    frontDoc.pose.orientation.x = lastPos.pose.orientation.x;
+    frontDoc.pose.orientation.y = lastPos.pose.orientation.y;
+    frontDoc.pose.orientation.z = lastPos.pose.orientation.z;
+    frontDoc.pose.orientation.w = lastPos.pose.orientation.w;
+    return frontDoc;
 }
 
 void DockNav::loop(){

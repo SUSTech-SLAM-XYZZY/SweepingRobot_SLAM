@@ -82,7 +82,7 @@ int main(int argc, char** argv) {
     ros::NodeHandle n;
     ros::Subscriber ros_tutorial_sub = n.subscribe("scan", 1000, callback_func);
     nowPos = n.subscribe("tracked_pose", 1000, update_pos);
-    angle_dist = n.advertise<geometry_msgs::PoseStamped>("/pos/angle_dist", 10);
+    angle_dist = n.advertise<geometry_msgs::PoseStamped>("/pos/doc_pos", 10);
     ros::spin();
     return 0;
 }
@@ -554,7 +554,7 @@ void sendRosInfo(vector<vector<Point *> > cluster_syn, double K){
     pose_odom.pose.orientation.w = quaterniontf.w();
 
     try {
-        listener.waitForTransform("/base_link", "/map", ros::Time(0), ros::Duration(3.0));
+        listener.waitForTransform("/map", "/base_link", ros::Time(0), ros::Duration(3.0));
         listener.transformPose("map", pose_odom, pose_map);
     }
     catch (tf::TransformException ex) {
@@ -568,75 +568,4 @@ void sendRosInfo(vector<vector<Point *> > cluster_syn, double K){
         angle_dist.publish(pose_map);
     }
     // TODO : use tf end
-
-    // TODO ： 30 cm test start
-//    double delta_x = abs(0.3 * cos(angleAftertf));
-//    double delta_y = abs(0.3 * sin(angleAftertf));
-//    int quadrant = get_quadrant(x, y);
-////    cout << "x is " << x << " y is " << y << endl;
-////    cout << "delta_x is " << delta_x << " delta_y is " << delta_y << endl;
-//    if(quadrant == 1){
-//        pose_odom.pose.position.x = x - delta_x;
-//        pose_odom.pose.position.y = y - delta_y;
-////        cout << "x is " << x - delta_x << " y is " << y - delta_y << endl;
-//    }else if(quadrant == 2){
-//        pose_odom.pose.position.x = x + delta_x;
-//        pose_odom.pose.position.y = y - delta_y;
-////        cout << "x is " << x + delta_x << " y is " << y - delta_y << endl;
-//    }else if(quadrant == 3){
-//        pose_odom.pose.position.x = x + delta_x;
-//        pose_odom.pose.position.y = y + delta_y;
-////        cout << "x is " << x + delta_x << " y is " << y + delta_y << endl;
-//    }else if(quadrant == 4){
-//        pose_odom.pose.position.x = x - delta_x;
-//        pose_odom.pose.position.y = y + delta_y;
-////        cout << "x is " << x - delta_x << " y is " << y + delta_y << endl;
-//    }
-//    // TODO : join together
-//    try {
-//        listener.waitForTransform("/base_link", "/map", ros::Time(0), ros::Duration(3.0));
-//        listener.transformPose("map", pose_odom, pose_map);
-////        cout << "x is " << pose_odom.pose.position.x << " y is " << pose_odom.pose.position.y << endl;
-//    }
-//    catch (tf::TransformException ex) {
-//        ROS_WARN("transfrom exception : %s", ex.what());
-//        return;
-//    }
-    // TODO : 30 cm test end
-//    Eigen::Quaterniond q1 = Eigen::Quaterniond(nowOrientation.w, nowOrientation.x, nowOrientation.y,
-//                                               nowOrientation.z).normalized();
-//    Eigen::Quaterniond q2 = Eigen::Quaterniond(1, 0, 0, 0).normalized();
-//
-//    Eigen::Vector3d t1 = Eigen::Vector3d(nowP.x, nowP.y, 0);
-//    Eigen::Vector3d t2 = Eigen::Vector3d(0, 0, 0);
-//
-//    Eigen::Vector3d p1 = Eigen::Vector3d(x, y, 0);
-//    Eigen::Vector3d p2;
-//
-//    p2 = q2 * q1.inverse() * (p1 - t1) + t2;
-////    cout << "dis is " << dis << " angle is " << angle << endl;
-////    cout << "x is " << x << " y is " << y << endl;
-////    cout << "now P is " << nowP.x << " " << nowP.y << endl;
-//    cout << p2.transpose() << endl;
-//    cout << "K angle is " << atan(K) / PI * 180 << endl;
-//    cout << "Euler angle is " << q1.toRotationMatrix().eulerAngles(2, 1, 0)[0] / PI * 180 << endl;
-//    cout << "angle is " << atan(K) / PI * 180 + q1.toRotationMatrix().eulerAngles(2, 1, 0)[0] / PI * 180 << endl;
-//
-//    Eigen::Quaterniond quaternion =
-//            Eigen::AngleAxisd(atan(K) + q1.toRotationMatrix().eulerAngles(2, 1, 0)[0], Eigen::Vector3d::UnitZ()) *
-//            Eigen::AngleAxisd(0, Eigen::Vector3d::UnitY()) *
-//            Eigen::AngleAxisd(0, Eigen::Vector3d::UnitX());
-//
-//    if (ros::ok()) {
-//        geometry_msgs::PoseStamped msg;
-//        msg.pose.position.x = p2.x();
-//        msg.pose.position.y = p2.y();
-//        msg.pose.position.z = p2.z();
-//        msg.pose.orientation.x = quaternion.x();
-//        msg.pose.orientation.y = quaternion.y();
-//        msg.pose.orientation.z = quaternion.z();
-//        msg.pose.orientation.w = quaternion.w();
-//        cout << "send!" << endl;
-//        angle_dist.publish(msg);
-//    }
 }

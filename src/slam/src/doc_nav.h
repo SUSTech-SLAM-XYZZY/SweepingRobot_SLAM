@@ -24,7 +24,7 @@ private:
     ros::Publisher commandPub; // Publisher to the robot's velocity command topic
     ros::Publisher stopNav; // Publisher to stop Nav when in the range of 0.1m
     ros::Publisher movingFlagPub;   // maybe is useful
-    ros::Subscriber laserSub;  // Subscriber to the robot's laser scan topic
+    ros::Subscriber docPos; // recv the doc pose
     ros::Subscriber movingFlag; // To nav or route
 
     geometry_msgs::PoseStamped currentPos;
