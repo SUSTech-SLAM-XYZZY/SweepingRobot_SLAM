@@ -10,8 +10,21 @@
 #include "geometry_msgs/PoseStamped.h"
 #include "geometry_msgs/Twist.h"
 
+using namespace std;
 
 typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> MoveBaseClient;
+
+DockNav::DockNav() {
+    enable = false;
+    startSpin = true;
+    nav_radian_range = NAV_ANGLE_RANGE / 180.0 * 3.14159;
+//        commandPub = node.advertise<>("", 10);
+    movingFlag = node.subscribe("/pos/movingFlag", 10, &DockNav::flagToAction, this);
+    movingFlagPub = node.advertise<slam::pos>("/pos/movingFlag", 10);
+    stopNav = node.advertise<actionlib_msgs::GoalID>("/move_base/cancel", 10);
+
+    cout << "init finish ! " << endl;
+}
 
 bool DockNav::isNearCurrentGoal(geometry_msgs::PoseStamped newPos) {
     double x_ = newPos.pose.position.x - lastPos.pose.position.x;
@@ -60,27 +73,30 @@ void DockNav::callback(const geometry_msgs::PoseStamped& msg) {
 
 void DockNav::checkDockPosUpdate() {
     dock_angle = tf::getYaw(currentPos.pose.orientation);
-    startSpin = dock_angle > nav_radian_range || dock_angle < nav_radian_range;
+    startSpin = dock_angle > 2 * PI - nav_radian_range || dock_angle < nav_radian_range;
 }
 
 void DockNav::flagToAction(const slam::pos &msg){
     if(msg.flag == START_NAV){
-        this->startFrontNav();
+        this->getFrontPos();
     }else if(msg.flag == START_ROUTE){
         this->startDockNav();
     }
 }
 
-DockNav::DockNav() {
-    enable = false;
-    startSpin = true;
-    nav_radian_range = NAV_ANGLE_RANGE / 180.0 * 3.14159;
-//        commandPub = node.advertise<>("", 10);
-    movingFlag = node.subscribe("/pos/movingFlag", 10, &DockNav::flagToAction, this);
-    movingFlagPub = node.advertise<slam::pos>("/move_base/cancel", 10);
-    stopNav = node.advertise<actionlib_msgs::GoalID>("/move_base/cancel", 10);
+geometry_msgs::PoseStamped DockNav::getFrontPos(){
+    double roll, pitch, yaw;
+    tf::Quaternion angle_tmp;
+    tf::quaternionMsgToTF(lastPos.pose.orientation,angle_tmp);
+    tf::Matrix3x3(angle_tmp).getRPY(roll, pitch, yaw);
+    cout << "roll is " << roll << " pitch is " << pitch << " yaw is " << yaw << endl;
 }
 
+void DockNav::loop(){
+    while (node.ok()){
+        ros::spinOnce();
+    }
+}
 
 void DockNav::startDockNav() {
     //tell the action client that we want to spin a thread by default

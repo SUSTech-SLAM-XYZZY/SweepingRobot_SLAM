@@ -1,0 +1,3 @@
+<launch>
+    <node name="doc_Nav" pkg="slam" type="docNavigation" output="screen"/>
+</launch>

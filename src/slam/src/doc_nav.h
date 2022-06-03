@@ -8,6 +8,8 @@
 #ifndef SLAM_DOC_NAV_H
 #define SLAM_DOC_NAV_H
 
+#define PI 3.1415926
+
 class DockNav {
 private:
     const double FORWARD_SPEED = 0.3;
@@ -47,11 +49,14 @@ private:
 
     void flagToAction(const slam::pos &msg);
 
+    geometry_msgs::PoseStamped getFrontPos();
+
 public:
     DockNav();
     void startDockNav();
     void stopDockNav();
     void startFrontNav();
+    void loop();
 };
 
 #endif //SLAM_DOC_NAV_H

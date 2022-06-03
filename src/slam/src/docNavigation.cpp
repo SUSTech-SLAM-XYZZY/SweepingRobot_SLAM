@@ -4,8 +4,12 @@
 #include "message_flag.h"
 #include "doc_nav.h"
 
+using namespace std;
+
 int main(int argc, char **argv){
-    ros::init(argc, argv, "Doc Navigation");
+    ros::init(argc, argv, "Doc_Navigation");
     // init the subscriber
     DockNav DockNav;
+    DockNav.loop();
+    return 0;
 }

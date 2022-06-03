@@ -570,20 +570,38 @@ void sendRosInfo(vector<vector<Point *> > cluster_syn, double K){
     // TODO : use tf end
 
     // TODO ： 30 cm test start
-    double delta_x = abs(0.3 * cos(angleAftertf));
-    double delta_y = abs(0.3 * sin(angleAftertf));
-    int quadrant = get_quadrant(x, y);
-    cout << "x is " << x << " y is " << y << endl;
-    cout << "delta_x is " << delta_x << " delta_y is " << delta_y << endl;
-    if(quadrant == 1){
-        cout << "x is " << x - delta_x << " y is " << y - delta_y << endl;
-    }else if(quadrant == 2){
-        cout << "x is " << x + delta_x << " y is " << y - delta_y << endl;
-    }else if(quadrant == 3){
-        cout << "x is " << x + delta_x << " y is " << y + delta_y << endl;
-    }else if(quadrant == 4){
-        cout << "x is " << x - delta_x << " y is " << y + delta_y << endl;
-    }
+//    double delta_x = abs(0.3 * cos(angleAftertf));
+//    double delta_y = abs(0.3 * sin(angleAftertf));
+//    int quadrant = get_quadrant(x, y);
+////    cout << "x is " << x << " y is " << y << endl;
+////    cout << "delta_x is " << delta_x << " delta_y is " << delta_y << endl;
+//    if(quadrant == 1){
+//        pose_odom.pose.position.x = x - delta_x;
+//        pose_odom.pose.position.y = y - delta_y;
+////        cout << "x is " << x - delta_x << " y is " << y - delta_y << endl;
+//    }else if(quadrant == 2){
+//        pose_odom.pose.position.x = x + delta_x;
+//        pose_odom.pose.position.y = y - delta_y;
+////        cout << "x is " << x + delta_x << " y is " << y - delta_y << endl;
+//    }else if(quadrant == 3){
+//        pose_odom.pose.position.x = x + delta_x;
+//        pose_odom.pose.position.y = y + delta_y;
+////        cout << "x is " << x + delta_x << " y is " << y + delta_y << endl;
+//    }else if(quadrant == 4){
+//        pose_odom.pose.position.x = x - delta_x;
+//        pose_odom.pose.position.y = y + delta_y;
+////        cout << "x is " << x - delta_x << " y is " << y + delta_y << endl;
+//    }
+//    // TODO : join together
+//    try {
+//        listener.waitForTransform("/base_link", "/map", ros::Time(0), ros::Duration(3.0));
+//        listener.transformPose("map", pose_odom, pose_map);
+////        cout << "x is " << pose_odom.pose.position.x << " y is " << pose_odom.pose.position.y << endl;
+//    }
+//    catch (tf::TransformException ex) {
+//        ROS_WARN("transfrom exception : %s", ex.what());
+//        return;
+//    }
     // TODO : 30 cm test end
 //    Eigen::Quaterniond q1 = Eigen::Quaterniond(nowOrientation.w, nowOrientation.x, nowOrientation.y,
 //                                               nowOrientation.z).normalized();
