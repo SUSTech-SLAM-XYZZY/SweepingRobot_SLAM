@@ -12,17 +12,25 @@ Wander::Wander()
     keepMoving0 = true;
     getRandom = false;
     startMovingFlag = false;
+    timeout = -1;
     // Advertise a new publisher for the robots velocity command topic
     commandPub = node.advertise<geometry_msgs::Twist>("/cmd_vel", 10);
     // Subscribe to the simulated robots laser scan topic
     laserSub = node.subscribe("/scan", 10, &Wander::scanCallback, this);
     // The subscriber to recvice the flag
     movingFlag = node.subscribe("/pos/movingFlag", 10, &Wander::ChangeFlag, this);
+
+    slowDownSignal = node.subscribe("/pos/doc_pos", 10, &Wander::slowDown, this);
 }
 // Send a velocity command
 void Wander::moveForward()
 {
     geometry_msgs::Twist msg; // The default constructor will set all commands to 0
+    if(this->timeout != -1 && (clock() - this->timeout) > 2 * 1000){
+        std::cout << "Revert !!" << std::endl;
+        this->FORWARD_SPEED = 0.1;
+        this->timeout = -1;
+    }
     msg.linear.x = FORWARD_SPEED;
     ROS_INFO("SPEED : % f", msg.linear.x);
     commandPub.publish(msg);
@@ -38,7 +46,7 @@ void Wander::turnCorner()
 
     if(getRandom)   //If you are turning, you do not need to regenerate random numbers, only the first moment of turning generates random numbers
     {
-        angular_velocity = 0.2;
+        angular_velocity = (random(100)-50)/50.0;
         msg.angular.z = angular_velocity;
     }
     ROS_INFO("Angular velocity : % f", msg.angular.z);
@@ -106,10 +114,12 @@ void Wander::startMoving()
 
         // the variable to info and stop
         if(startMovingFlag){
-            if (!keepMoving)
+            if (!keepMoving){
                 turnCorner();
-            else
+            }
+            else{
                 moveForward();
+            }
         }
         rate.sleep();
     }
@@ -127,4 +137,10 @@ void Wander::stopMoving(){
     msg.linear.z = 0;
     commandPub.publish(msg);
     ROS_INFO("Stop Moving!");
+}
+
+void Wander::slowDown(const geometry_msgs::PoseStamped &msg){
+    this->FORWARD_SPEED = 0.05;
+    this->timeout = clock();
+    std::cout << "Slow Down !!" << std::endl;
 }

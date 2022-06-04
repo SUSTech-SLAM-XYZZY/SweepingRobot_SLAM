@@ -1,5 +1,5 @@
 <launch>
-    <param name="/use_sim_time" value="true"/>
+    <param name="/use_sim_time" value="false"/>
 
     <!--Run Gazebo with turtlebot-->
     <!--  <include file="$(find turtlebot3_gazebo)/launch/turtlebot3_world.launch"/> -->

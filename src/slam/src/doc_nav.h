@@ -26,7 +26,8 @@ private:
     ros::Publisher movingFlagPub;   // maybe is useful
     ros::Subscriber docPos; // recv the doc pose
     ros::Subscriber movingFlag; // To nav or route
-
+    ros::Subscriber nowPose;    // to recv the robot location in map
+    geometry_msgs::PoseStamped nowPosInMap;  // the robot location in map
     geometry_msgs::PoseStamped currentPos;
 
     float dock_angle;
@@ -50,6 +51,8 @@ private:
     void flagToAction(const slam::pos &msg);
 
     geometry_msgs::PoseStamped getFrontPos();
+
+    void updateNowPos(const geometry_msgs::PoseStamped &msg);
 
 public:
     DockNav();

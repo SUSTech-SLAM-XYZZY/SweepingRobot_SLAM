@@ -21,6 +21,7 @@ DockNav::DockNav() {
 //        commandPub = node.advertise<>("", 10);
     movingFlag = node.subscribe("/pos/movingFlag", 10, &DockNav::flagToAction, this);
     docPos = node.subscribe("/pos/doc_pos", 10, &DockNav::callback, this);
+    nowPose = node.subscribe("tracked_pose", 1000, &DockNav::updateNowPos, this);
     movingFlagPub = node.advertise<slam::pos>("/pos/movingFlag", 10);
     stopNav = node.advertise<actionlib_msgs::GoalID>("/move_base/cancel", 10);
     cout << "init finish ! " << endl;
@@ -39,12 +40,13 @@ bool DockNav::isNearCurrentGoal(geometry_msgs::PoseStamped newPos) {
             return false;
         }
         else {
-            updateCount = 0;
+            updateCount = 1;
             return true;
         }
     }
     else {
-        updateCount = 0;
+        updateCount = 1;
+        lastPos = newPos;
         return false;
     }
 }
@@ -67,8 +69,10 @@ void DockNav::doSpinning() {
 
 void DockNav::callback(const geometry_msgs::PoseStamped& msg) {
     if (isNearCurrentGoal(msg)) {
+        cout << "Doc pos set!" << endl;
         currentPos = msg;
     }
+    cout << "Now Update count is " << updateCount << endl;
 }
 
 void DockNav::checkDockPosUpdate() {
@@ -78,11 +82,14 @@ void DockNav::checkDockPosUpdate() {
 
 void DockNav::flagToAction(const slam::pos &msg){
     if(msg.flag == START_NAV){
-        geometry_msgs::PoseStamped tmp = this->getFrontPos();
-        cout << tmp << endl;
+        this->startFrontNav();
     }else if(msg.flag == START_ROUTE){
         this->startDockNav();
     }
+}
+
+void DockNav::updateNowPos(const geometry_msgs::PoseStamped &msg){
+    nowPosInMap = msg;
 }
 
 geometry_msgs::PoseStamped DockNav::getFrontPos(){
@@ -91,7 +98,7 @@ geometry_msgs::PoseStamped DockNav::getFrontPos(){
     tf::Quaternion angle_tmp;
     tf::quaternionMsgToTF(lastPos.pose.orientation,angle_tmp);
     tf::Matrix3x3(angle_tmp).getRPY(roll, pitch, yaw);
-    cout << "roll is " << roll << " pitch is " << pitch << " yaw is " << yaw << endl;
+//    cout << "roll is " << roll << " pitch is " << pitch << " yaw is " << yaw << endl;
     yaw += PI;
     double front_len = 0.3;
     double delta_x = front_len * cos(yaw);
@@ -157,7 +164,7 @@ void DockNav::stopDockNav() {
 
 void DockNav::startFrontNav(){
     // TODO : recvice a pos
-    geometry_msgs::PoseStamped goal;
+    geometry_msgs::PoseStamped goal = getFrontPos();
     geometry_msgs::PoseStamped mypos;
     double range = 0.1;
     if(pow(goal.pose.position.x - mypos.pose.position.x, 2) + pow(goal.pose.position.y - mypos.pose.position.y, 2) < pow(range, 2)){
@@ -167,7 +174,7 @@ void DockNav::startFrontNav(){
         sleep(2);
         // The request may send to robot, can start to startDocNav
         slam::pos flagMsg;
-        flagMsg.flag = 3;
+        flagMsg.flag = START_ROUTE;
         movingFlagPub.publish(flagMsg);
     }
 }
