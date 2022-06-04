@@ -24,6 +24,7 @@ private:
     ros::Publisher commandPub; // Publisher to the robot's velocity command topic
     ros::Publisher stopNav; // Publisher to stop Nav when in the range of 0.1m
     ros::Publisher movingFlagPub;   // maybe is useful
+    ros::Publisher navGoal; // set the front 30cm as goal
     ros::Subscriber docPos; // recv the doc pose
     ros::Subscriber movingFlag; // To nav or route
     ros::Subscriber nowPose;    // to recv the robot location in map

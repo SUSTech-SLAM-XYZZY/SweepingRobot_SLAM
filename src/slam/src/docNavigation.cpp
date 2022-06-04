@@ -10,6 +10,8 @@ int main(int argc, char **argv){
     ros::init(argc, argv, "Doc_Navigation");
     // init the subscriber
     DockNav DockNav;
-    DockNav.loop();
+    // waiting
+    ros::spin();
+//    DockNav.loop();
     return 0;
 }

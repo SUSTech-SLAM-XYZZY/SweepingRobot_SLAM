@@ -9,6 +9,7 @@
 #include "tf/transform_datatypes.h"
 #include "geometry_msgs/PoseStamped.h"
 #include "geometry_msgs/Twist.h"
+#include <move_base_msgs/MoveBaseAction.h>
 
 using namespace std;
 
@@ -19,11 +20,11 @@ DockNav::DockNav() {
     startSpin = true;
     nav_radian_range = NAV_ANGLE_RANGE / 180.0 * 3.14159;
 //        commandPub = node.advertise<>("", 10);
-    movingFlag = node.subscribe("/pos/movingFlag", 10, &DockNav::flagToAction, this);
-    docPos = node.subscribe("/pos/doc_pos", 10, &DockNav::callback, this);
+    movingFlag = node.subscribe("/pos/movingFlag", 1000, &DockNav::flagToAction, this);
+    docPos = node.subscribe("/pos/doc_pos", 1000, &DockNav::callback, this);
     nowPose = node.subscribe("tracked_pose", 1000, &DockNav::updateNowPos, this);
-    movingFlagPub = node.advertise<slam::pos>("/pos/movingFlag", 10);
-    stopNav = node.advertise<actionlib_msgs::GoalID>("/move_base/cancel", 10);
+    movingFlagPub = node.advertise<slam::pos>("/pos/movingFlag", 1000);
+    stopNav = node.advertise<actionlib_msgs::GoalID>("/move_base/cancel", 1000);
     cout << "init finish ! " << endl;
 }
 
@@ -165,16 +166,31 @@ void DockNav::stopDockNav() {
 void DockNav::startFrontNav(){
     // TODO : recvice a pos
     geometry_msgs::PoseStamped goal = getFrontPos();
-    geometry_msgs::PoseStamped mypos;
     double range = 0.1;
-    if(pow(goal.pose.position.x - mypos.pose.position.x, 2) + pow(goal.pose.position.y - mypos.pose.position.y, 2) < pow(range, 2)){
-        actionlib_msgs::GoalID sMsg;
-        stopNav.publish(sMsg);
-        // ready to send to startDocNav, but wait for a second
-        sleep(2);
-        // The request may send to robot, can start to startDocNav
-        slam::pos flagMsg;
-        flagMsg.flag = START_ROUTE;
-        movingFlagPub.publish(flagMsg);
+    // TODO : set as global variable
+    MoveBaseClient ac("move_base", true);
+    while(!ac.waitForServer(ros::Duration(5.0))){
+        ROS_INFO("Waiting for the move_base action server to come up");
+    }
+    move_base_msgs::MoveBaseGoal sendGoal;
+    sendGoal.target_pose = goal;
+    ac.sendGoal(sendGoal);
+    ros::Rate rate(10);
+    while(ros::ok()){
+        ros::spinOnce();
+        cout << "Now dis is " << sqrt(pow(goal.pose.position.x - this->nowPosInMap.pose.position.x, 2) + pow(goal.pose.position.y - this->nowPosInMap.pose.position.y, 2)) << endl;
+        if(pow(goal.pose.position.x - this->nowPosInMap.pose.position.x, 2) + pow(goal.pose.position.y - this->nowPosInMap.pose.position.y, 2) < pow(range, 2)){
+            cout << "Approaching goal, ready to stop" << endl;
+            actionlib_msgs::GoalID sMsg;
+            stopNav.publish(sMsg);
+            // ready to send to startDocNav, but wait for a second
+            sleep(2);
+            // The request may send to robot, can start to startDocNav
+//            slam::pos flagMsg;
+//            flagMsg.flag = START_ROUTE;
+//            movingFlagPub.publish(flagMsg);
+            break;
+        }
+        rate.sleep();
     }
 }
