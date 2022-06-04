@@ -10,16 +10,20 @@
 #include "geometry_msgs/PoseStamped.h"
 #include "geometry_msgs/Twist.h"
 #include <move_base_msgs/MoveBaseAction.h>
+#include <tf/transform_listener.h>
 
 using namespace std;
 
 typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> MoveBaseClient;
 
 DockNav::DockNav() {
-    enable = false;
+    enable = true;
     startSpin = true;
+    dock_angle = 0.0f;
+    dock_dis = 100.0f;
     nav_radian_range = NAV_ANGLE_RANGE / 180.0 * 3.14159;
 //        commandPub = node.advertise<>("", 10);
+    commandPub = node.advertise<geometry_msgs::Twist>("/cmd_vel", 10);
     movingFlag = node.subscribe("/pos/movingFlag", 1000, &DockNav::flagToAction, this);
     docPos = node.subscribe("/pos/doc_pos", 1000, &DockNav::callback, this);
     nowPose = node.subscribe("tracked_pose", 1000, &DockNav::updateNowPos, this);
@@ -63,22 +67,40 @@ void DockNav::moveForward() {
 // Spin base_link so that the robot face the dock
 void DockNav::doSpinning() {
     static geometry_msgs::Twist msg;
-    msg.angular.z = ANGULAR_VELOCITY * (dock_angle < 0 ? 1 : -1);
+    msg.angular.z = ANGULAR_VELOCITY * (dock_angle > 0 ? 1 : -1);
     ROS_INFO("Angular velocity : % f", msg.angular.z);
     commandPub.publish(msg);
 }
 
 void DockNav::callback(const geometry_msgs::PoseStamped& msg) {
     if (isNearCurrentGoal(msg)) {
-        cout << "Doc pos set!" << endl;
+        ROS_INFO("Doc pos set!");
         currentPos = msg;
-    }
-    cout << "Now Update count is " << updateCount << endl;
-}
 
-void DockNav::checkDockPosUpdate() {
-    dock_angle = tf::getYaw(currentPos.pose.orientation);
-    startSpin = dock_angle > 2 * PI - nav_radian_range || dock_angle < nav_radian_range;
+        // update base_CurrentGoal
+        tf::TransformListener listener;
+        currentPos.header.stamp = ros::Time();
+        try {
+            listener.waitForTransform("/base_link", "/map", ros::Time(0), ros::Duration(3.0));
+            listener.transformPose("base_link", currentPos, base_CurrentPos);
+            cout << base_CurrentPos << endl;
+        } catch (tf::TransformException ex) {
+            ROS_WARN("transfrom exception : %s", ex.what());
+            return;
+        }
+        ROS_INFO("Dock base_link is set");
+    }
+    ROS_INFO("Now Update count is %d", updateCount);
+
+    dock_angle = tf::getYaw(base_CurrentPos.pose.orientation);
+    ROS_INFO("GetYaw: %f, range is %f, %f", dock_angle, (float)2 * PI - nav_radian_range, (float)nav_radian_range);
+    startSpin = dock_angle < -nav_radian_range || dock_angle > nav_radian_range;
+
+    float dock_dis = std::pow((nowPosInMap.pose.position.x - currentPos.pose.position.x), 2)
+            + std::pow((nowPosInMap.pose.position.y - currentPos.pose.position.y), 2);
+    ROS_INFO("dock_dis = %f, MIN_DOCK_DIS = %f", dock_dis, MIN_DOCK_DIS);
+
+    enable = dock_dis > MIN_DOCK_DIS * MIN_DOCK_DIS;
 }
 
 void DockNav::flagToAction(const slam::pos &msg){
@@ -101,7 +123,7 @@ geometry_msgs::PoseStamped DockNav::getFrontPos(){
     tf::Matrix3x3(angle_tmp).getRPY(roll, pitch, yaw);
 //    cout << "roll is " << roll << " pitch is " << pitch << " yaw is " << yaw << endl;
     yaw += PI;
-    double front_len = 0.3;
+    double front_len = 0.2;
     double delta_x = front_len * cos(yaw);
     double delta_y = front_len * sin(yaw);
     frontDoc.header.frame_id = lastPos.header.frame_id;
@@ -115,47 +137,30 @@ geometry_msgs::PoseStamped DockNav::getFrontPos(){
     return frontDoc;
 }
 
-void DockNav::loop(){
+void DockNav::loop() {
     while (node.ok()){
         ros::spinOnce();
     }
 }
 
 void DockNav::startDockNav() {
-    //tell the action client that we want to spin a thread by default
-    MoveBaseClient ac("move_base", true);
-
-    //wait for the action server to come up
-    while(!ac.waitForServer(ros::Duration(5.0))){
-        ROS_INFO("Waiting for the move_base action server to come up");
-    }
-
     ros::Rate rate(10);
-    ROS_INFO("Go to dock now...");
-
-    while (ros::ok()) {
+    while(ros::ok()){
         ros::spinOnce();
 
-        // TODO: switch state
-        if (enable) {
-            // TODO: publish position to Nav
-            geometry_msgs::Twist msg;
-            msg.linear.x = FORWARD_SPEED;
-            ROS_INFO("SPEED : % f", msg.linear.x);
-            commandPub.publish(msg);
-            ROS_INFO("Sending goal");
-            move_base_msgs::MoveBaseGoal currentGoal;
-
-            ac.sendGoal(currentGoal);
-            ac.waitForResult();
-            if(ac.getState() == actionlib::SimpleClientGoalState::SUCCEEDED)
-                ROS_INFO("Hooray, the base moved 1 meter forward");
-            else
-                ROS_INFO("The base failed to move forward 1 meter for some reason");
-
-            // finish and exit
+        if (!enable) {
+            FORWARD_SPEED = 0;
+            moveForward();
+            cout << "Shutting down!" << endl;
             return;
         }
+
+        if (startSpin) {
+            doSpinning();
+        } else {
+            moveForward();
+        }
+        rate.sleep();
     }
 }
 

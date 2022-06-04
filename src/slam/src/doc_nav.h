@@ -12,10 +12,10 @@
 
 class DockNav {
 private:
-    const double FORWARD_SPEED = 0.3;
+    double FORWARD_SPEED = 0.3;
     const double ANGULAR_VELOCITY = 0.4;
-    const double NAV_ANGLE_RANGE = 30.0;   // keep dock in ± this angle
-
+    const double NAV_ANGLE_RANGE = 20.0;   // keep dock in ± this angle
+    const float  MIN_DOCK_DIS = 0.1;    // minimum distance 10cm
     double nav_radian_range;
 
     bool enable; // check enable
@@ -31,7 +31,10 @@ private:
     geometry_msgs::PoseStamped nowPosInMap;  // the robot location in map
     geometry_msgs::PoseStamped currentPos;
 
+    geometry_msgs::PoseStamped base_CurrentPos; // currentPos in base_link
+
     float dock_angle;
+    float dock_dis;
 
     int updateCount = 0;
     double tolerance = 0.5;     // 5cm
